@@ -3,14 +3,15 @@
 import { clamp } from "@/util/clamp"
 import { useEffect, useRef, useState } from "react"
 
-const CANVAS_WIDTH = 9000
-const CANVAS_HEIGHT = 9000
+const CANVAS_WIDTH = 200_000
+const CANVAS_HEIGHT = 200_000
 const CANVAS_PADDING = 200
 
 export function App() {
 
   const canvasContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   const [state, setState] = useState({
     camera: {
@@ -18,6 +19,19 @@ export function App() {
       y: 0, // as Y increases, the camera would go down, and the canvas would translate up
     },
     zoom: 1,
+    contextMenu: {
+      open: false,
+      x: 0,
+      y: 0,
+    },
+    objects: [] as {
+      id: string,
+      name: string,
+      pos: { x: number, y: number },
+      size: { width: number, height: number },
+      color: string,
+    }[],
+    selected: [] as string[], // array of object IDs that are selected
   })
   const getPos = () => state.camera
   const getZoom = () => state.zoom
@@ -25,7 +39,6 @@ export function App() {
   const clampPosY = (num: number, zoom: number) => clamp((-CANVAS_PADDING * zoom), num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
   // const clampZoom = (num: number) => clamp(0.5, num, 1.5) // real: 0.02 - 256
   const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 256
-
 
   // Handle Trackpad
   useEffect(() => {
@@ -155,8 +168,70 @@ export function App() {
     }
   }, [state])
 
+  // Handle Right Click
+  useEffect(() => {
+    const ev = (e: MouseEvent) => {
+      e.preventDefault()
+      setState({
+        ...state,
+        contextMenu: {
+          open: true,
+          x: e.clientX,
+          y: e.clientY
+        }
+      })
+
+      // Handle click outside of context menu to close it
+      const onClick = (e: MouseEvent) => {
+        if (!state.contextMenu.open) {
+          window.removeEventListener('click', onClick)
+          return
+        }
+        if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+          setState({ ...state, contextMenu: { open: false, x: 0, y: 0 } })
+          window.removeEventListener('click', onClick)
+        }
+
+      }
+      window.addEventListener('click', onClick)
+    }
+    window.addEventListener('contextmenu', ev)
+    return () => {
+      window.removeEventListener('contextmenu', ev)
+    }
+  }, [state])
+
+  // New Object Handler
+  const onCreateNewObject = () => {
+    // Get world-space position of the context menu
+    const pos = {
+      x: (state.contextMenu.x + state.camera.x) / state.zoom,
+      y: (state.contextMenu.y + state.camera.y) / state.zoom
+    }
+
+    setState({
+      ...state,
+      objects: [
+        ...state.objects,
+        {
+          id: crypto.randomUUID(),
+          name: `Object ${ state.objects.length + 1 }`,
+          pos: { x: pos.x, y: pos.y },
+          size: { width: 50, height: 50 },
+          color: '#fff'
+        }
+      ],
+      contextMenu: { open: false, x: 0, y: 0 }
+    })
+  }
+
+  // Selected Object Handler
+  const onObjectClick = (id: string) => {
+
+  }
+
   return (
-    <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip">
+    <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative">
       {/* Debug Layer */}
       <div className="fixed top-2 left-2 z-[9999] font-mono whitespace-pre">
         x: {state.camera.x.toFixed(5).padStart(10)}, y: {state.camera.y.toFixed(5).padStart(10)}<br />
@@ -165,16 +240,45 @@ export function App() {
         <span id="mousepos"></span><br />
         <span id="localmousepos"></span>
       </div>
-      {/* Canvas View */}
-      <div ref={canvasRef} className="canvas bg-neutral-400 size-[9000px] bg-[url('/image.png')] relative"
+      {/* Context Menu */}
+      <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
         style={{
+          left: state.contextMenu.x + 'px',
+          top: state.contextMenu.y + 'px',
+          display: state.contextMenu.open ? 'block' : 'none',
+        }}
+      >
+        <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
+          onClick={onCreateNewObject}
+        >+ Create new Object</button>
+      </div>
+
+      {/* Canvas View */}
+      <div ref={canvasRef} className="canvas bg-neutral-400 bg-[url('/image.png')] relative"
+        style={{
+          width: `${ CANVAS_WIDTH }px`,
+          height: `${ CANVAS_HEIGHT }px`,
           // Pos needs to be negative because it needs to go the opposite of the camera.
           transform: `translate(${ -state.camera.x }px, ${ -state.camera.y }px) scale(${ state.zoom }) `,
           transformOrigin: '0 0',
         }}
       >
         {/* Objects */}
-        <div className="size-40 absolute top-80 left-80 bg-white" />
+        {
+          state.objects.map((obj) => (
+            <div key={obj.id} className="object absolute rounded-sm"
+              style={{
+                left: `${ obj.pos.x }px`,
+                top: `${ obj.pos.y }px`,
+                width: `${ obj.size.width }px`,
+                height: `${ obj.size.height }px`,
+                backgroundColor: obj.color,
+              }}
+            >
+              {/* <span className="text-white text-xs">{obj.name}</span> */}
+            </div>
+          ))
+        }
       </div>
     </div>
   )
