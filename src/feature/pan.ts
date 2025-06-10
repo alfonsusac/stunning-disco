@@ -11,6 +11,7 @@ export function useCanvasPanning(
   const handlePanning = (deltaX: number, deltaY: number) => {
     const currCanvas = state().canvas
     const currZoom = state().zoom
+    if (state().contextMenu.open) return
     setState(prev => ({ ...prev, canvas: new Point(clampPosX(currCanvas.x + deltaX, currZoom), clampPosY(currCanvas.y + deltaY,currZoom)) }))
   }
 
