@@ -14,8 +14,6 @@ export function useCanvasZoom(
     const currZoom = state().zoom
     const mouse = new Point(e.clientX, e.clientY)
     if (e.metaKey || e.ctrlKey) {
-      console.log(e.deltaMode)
-      console.log(e.deltaY)
       // Zoom in/out
       // - pinch out / zoom in = -deltaY
       // - pinch in / zoom out = +deltaY
