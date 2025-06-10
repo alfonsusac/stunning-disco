@@ -27,7 +27,7 @@ function useAppState() {
     objects: [] as {
       id: string,
       name: string,
-      pos: { x: number, y: number },
+      pos: Point,
       size: { width: number, height: number },
       color: string,
     }[],
@@ -85,12 +85,6 @@ export function App() {
 
   // New Object Handler
   const onCreateNewObject = () => {
-    // Get world-space position of the context menu
-    const pos = {
-      x: (state().contextMenu.x + state().canvas.x) / state().zoom,
-      y: (state().contextMenu.y + state().canvas.y) / state().zoom
-    }
-
     setState({
       ...state(),
       objects: [
@@ -98,7 +92,7 @@ export function App() {
         {
           id: crypto.randomUUID(),
           name: `Object ${ state().objects.length + 1 }`,
-          pos: { x: pos.x, y: pos.y },
+          pos: getCanvasPos(appState, new Point(state().contextMenu.x, state().contextMenu.y)),
           size: { width: 50, height: 50 },
           color: '#fff'
         }
