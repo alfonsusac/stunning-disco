@@ -3,7 +3,6 @@
 import { useAppContextMenu } from "@/feature/context-menu"
 import { useCanvasPanning } from "@/feature/pan"
 import { useCanvasZoom } from "@/feature/zoom"
-import { offsetCanvasPosAfterZoomAroundPoint } from "@/feature/zoomAroundPoint"
 import { Point } from "@/lib/point"
 import { useWindowEventListenerEffect } from "@/lib/useWindowEventListener"
 import { clamp } from "@/util/clamp"
