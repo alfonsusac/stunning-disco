@@ -2,6 +2,7 @@
 
 import { useAppContextMenu } from "@/feature/context-menu"
 import { useCanvasPanning } from "@/feature/pan"
+import { useCanvasZoom } from "@/feature/zoom"
 import { offsetCanvasPosAfterZoomAroundPoint } from "@/feature/zoomAroundPoint"
 import { Point } from "@/lib/point"
 import { useWindowEventListenerEffect } from "@/lib/useWindowEventListener"
@@ -66,58 +67,23 @@ export function App() {
   const appState = useAppState()
   const { state, setState, stateRef } = appState
 
-  // Handle Trackpad
-  useWindowEventListenerEffect('wheel', (e: WheelEvent) => {
-    e.preventDefault()
-    const currCanvas = state().canvas
-    const currZoom = state().zoom
-    const mouse = new Point(e.clientX, e.clientY)
-    if (e.metaKey || e.ctrlKey) {
-      // Zoom in/out
-      // - pinch out / zoom in = -deltaY
-      // - pinch in / zoom out = +deltaY
-      const zoomIntensity = 0.015 // how fast zoom changes
-      const newZoom = clampZoom(currZoom - e.deltaY * zoomIntensity * (currZoom / 2))
-      // Its using minus because:
-      // - zoom in  -> (-deltaY) -> zoom needs to be higher.
-      // - zoom out -> (+deltaY) -> zoom needs to be lower.
-
-      const newPos = offsetCanvasPosAfterZoomAroundPoint(
-        currZoom,
-        newZoom,
-        mouse,
-        currCanvas
-      )
-
-      setState({
-        ...stateRef.current,
-        zoom: newZoom,
-        canvas: new Point(clampPosX(newPos.x, newZoom), clampPosY(newPos.y, newZoom))
-      })
-    }
-  }, { passive: false })
+  useCanvasPanning(appState)
+  useCanvasZoom(appState)
+  useAppContextMenu(appState, contextMenuRef)
 
   // Handle Mouse Move for Debug UI
-  useEffect(() => {
+  useWindowEventListenerEffect('mousemove', e => {
     const debugRefMousePos = document.getElementById('mousepos')!
     const debugRefMousePosLocal = document.getElementById('localmousepos')!
-
-    const ev = (e: MouseEvent) => {
-      debugRefMousePos.innerText = `mouse: ${ e.clientX }, ${ e.clientY }`
-      const localMousePos = {
-        x: (e.clientX + stateRef.current.canvas.x) / stateRef.current.zoom,
-        y: (e.clientY + stateRef.current.canvas.y) / stateRef.current.zoom
-      }
-      debugRefMousePosLocal.innerText = `local mouse: ${ localMousePos.x }, ${ localMousePos.y }`
+    debugRefMousePos.innerText = `mouse: ${ e.clientX }, ${ e.clientY }`
+    const localMousePos = {
+      x: (e.clientX - stateRef.current.canvas.x) / stateRef.current.zoom,
+      y: (e.clientY - stateRef.current.canvas.y) / stateRef.current.zoom
     }
-    window.addEventListener('mousemove', ev)
-    return () => {
-      window.removeEventListener('mousemove', ev)
-    }
-  }, [])
+    debugRefMousePosLocal.innerText = `local mouse: ${ localMousePos.x }, ${ localMousePos.y }`
+  })
 
-  useCanvasPanning(appState)
-  useAppContextMenu(appState, contextMenuRef)
+
 
   // New Object Handler
   const onCreateNewObject = () => {
@@ -144,7 +110,9 @@ export function App() {
   }
 
   return (
-    <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative">
+    <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative"
+      style={{ cursor: state().input.middleClick ? "grab" : "unset" }}
+    >
       {/* Debug Layer */}
       <div className="fixed top-2 left-2 z-[9999] font-mono whitespace-pre">
         x: {state().canvas.x.toFixed(5).padStart(10)}, y: {state().canvas.y.toFixed(5).padStart(10)}<br />
