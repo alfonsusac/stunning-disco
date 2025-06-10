@@ -20,16 +20,15 @@ export function useCanvasPanning(
     // Drag the canvas
     // - swipe right = +deltaX
     // - swipe down = +deltaY
-    // - to move down, swipe down. Thats why its a + (plus)
-    handlePanning(e.deltaX, e.deltaY)
+    // - to move camera down, swipe down. Camera is opposite of canvas (canvas go up). Thats why its a - (plus)
+    handlePanning(-e.deltaX, -e.deltaY)
   }, { passive: false })
 
   useEffect(() => {
     const middleClick = state().mouse.middleClick
     if (!middleClick) return
-    // On mouse drag, the movement is opposite.
     return windowEventListenerEffect('mousemove', (e) => {
-      handlePanning(-e.movementX, -e.movementY)
+      handlePanning(e.movementX, e.movementY)
     })
   }, [state().mouse.middleClick])
 }
