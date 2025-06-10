@@ -42,9 +42,11 @@ function useAppState() {
     setState((prev) => ({ ...prev, mouse: { ...prev.mouse, position: new Point(e.clientX, e.clientY) } }))
   })
   useWindowEventListenerEffect('mousedown', (e) => {
+    if (e.button !== 1) return // Only handle middle click
     setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
   })
   useWindowEventListenerEffect('mouseup', (e) => {
+    if (e.button !== 1) return // Only handle middle click
     setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
   })
 
