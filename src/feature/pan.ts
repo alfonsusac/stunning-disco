@@ -20,7 +20,6 @@ export function useCanvasPanning(
     const newX = currCanvas.x - e.deltaX
     const newY = currCanvas.y - e.deltaY
     setState(prev => ({ ...prev, canvas: new Point(clampPosX(newX, currZoom), clampPosY(newY, currZoom)) }))
-
   }, { passive: false })
 
   useEffect(() => {

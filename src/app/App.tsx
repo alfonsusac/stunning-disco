@@ -62,7 +62,7 @@ function useAppState() {
 export const clampPosX = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_WIDTH * zoom - window.innerWidth) + (CANVAS_PADDING * zoom))
 export const clampPosY = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
 export const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 256
-export const getCanvasPos = (state: ReturnType<typeof useAppState>['state'], point: Point) => point.subtract(new Point(state().canvas.x, state().canvas.y)).divide(state.zoom)
+export const getCanvasPos = (appState: AppState, point: Point) => point.subtract(new Point(appState.state().canvas.x, appState.state().canvas.y)).scale(1 / appState.state().zoom)
 
 export function App() {
   const canvasContainerRef = useRef<HTMLDivElement>(null)
@@ -80,10 +80,7 @@ export function App() {
     const debugRefMousePos = document.getElementById('mousepos')!
     const debugRefMousePosLocal = document.getElementById('localmousepos')!
     debugRefMousePos.innerText = `mouse: ${ state().mouse.position.x }, ${ state().mouse.position.y }`
-    const localMousePos = {
-      x: (state().mouse.position.x - stateRef.current.canvas.x) / stateRef.current.zoom,
-      y: (state().mouse.position.y - stateRef.current.canvas.y) / stateRef.current.zoom
-    }
+    const localMousePos = getCanvasPos(appState, state().mouse.position)
     debugRefMousePosLocal.innerText = `local mouse: ${ localMousePos.x }, ${ localMousePos.y }`
   }, [state()])
 
