@@ -24,7 +24,7 @@ export function useCanvasPanning(
   }, { passive: false })
 
   useEffect(() => {
-    const middleClick = state().input.middleClick
+    const middleClick = state().mouse.middleClick
     if (!middleClick) return
 
     return windowEventListenerEffect('mousemove', (e) => {
@@ -37,5 +37,5 @@ export function useCanvasPanning(
       }))
     })
 
-  }, [state().input.middleClick])
+  }, [state().mouse.middleClick])
 }

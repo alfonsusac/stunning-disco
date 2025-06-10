@@ -33,16 +33,20 @@ function useAppState() {
       color: string,
     }[],
     selected: [] as string[], // array of object IDs that are selected
-    input: {
-      middleClick: false
+    mouse: {
+      middleClick: false,
+      position: new Point(0, 0)
     }
   })
 
-  useWindowEventListenerEffect('mousedown', () => {
-    setState((prev) => ({ ...prev, input: { ...prev.input, middleClick: true } }))
+  useWindowEventListenerEffect('mousemove', e => {
+    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, position: new Point(e.clientX, e.clientY) } }))
   })
-  useWindowEventListenerEffect('mouseup', () => {
-    setState((prev) => ({ ...prev, input: { ...prev.input, middleClick: false } }))
+  useWindowEventListenerEffect('mousedown', (e) => {
+    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
+  })
+  useWindowEventListenerEffect('mouseup', (e) => {
+    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
   })
 
   const stateRef = useRef(_state)
@@ -58,7 +62,7 @@ function useAppState() {
 export const clampPosX = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_WIDTH * zoom - window.innerWidth) + (CANVAS_PADDING * zoom))
 export const clampPosY = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
 export const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 256
-
+export const getCanvasPos = (state: ReturnType<typeof useAppState>['state'], point: Point) => point.subtract(new Point(state().canvas.x, state().canvas.y)).divide(state.zoom)
 
 export function App() {
   const canvasContainerRef = useRef<HTMLDivElement>(null)
@@ -72,18 +76,16 @@ export function App() {
   useAppContextMenu(appState, contextMenuRef)
 
   // Handle Mouse Move for Debug UI
-  useWindowEventListenerEffect('mousemove', e => {
+  useEffect(() => {
     const debugRefMousePos = document.getElementById('mousepos')!
     const debugRefMousePosLocal = document.getElementById('localmousepos')!
-    debugRefMousePos.innerText = `mouse: ${ e.clientX }, ${ e.clientY }`
+    debugRefMousePos.innerText = `mouse: ${ state().mouse.position.x }, ${ state().mouse.position.y }`
     const localMousePos = {
-      x: (e.clientX - stateRef.current.canvas.x) / stateRef.current.zoom,
-      y: (e.clientY - stateRef.current.canvas.y) / stateRef.current.zoom
+      x: (state().mouse.position.x - stateRef.current.canvas.x) / stateRef.current.zoom,
+      y: (state().mouse.position.y - stateRef.current.canvas.y) / stateRef.current.zoom
     }
     debugRefMousePosLocal.innerText = `local mouse: ${ localMousePos.x }, ${ localMousePos.y }`
-  })
-
-
+  }, [state()])
 
   // New Object Handler
   const onCreateNewObject = () => {
@@ -111,7 +113,7 @@ export function App() {
 
   return (
     <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative"
-      style={{ cursor: state().input.middleClick ? "grab" : "unset" }}
+      style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
     >
       {/* Debug Layer */}
       <div className="fixed top-2 left-2 z-[9999] font-mono whitespace-pre">
