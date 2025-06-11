@@ -35,6 +35,10 @@ function useAppState() {
     mouse: {
       middleClick: false,
       position: new Point(0, 0)
+    },
+    controls: {
+      selecting: false,
+      
     }
   })
 
@@ -43,6 +47,7 @@ function useAppState() {
   })
   useWindowEventListenerEffect('mousedown', (e) => {
     if (e.button !== 1) return // Only handle middle click
+    if (state().contextMenu.open) return
     setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
   })
   useWindowEventListenerEffect('mouseup', (e) => {

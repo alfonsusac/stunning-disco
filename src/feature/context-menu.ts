@@ -19,7 +19,6 @@ export function useAppContextMenu(
   // Handle Right Click Outside Context Menu
   useEffect(() => {
     if (!state().contextMenu.open) return
-
     return windowEventListenerEffect('click', (e: MouseEvent) => {
       if (e.button !== 0) return // Only handle left click
       if (!state().contextMenu.open) return // Context menu is not open
