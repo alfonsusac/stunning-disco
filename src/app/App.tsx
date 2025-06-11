@@ -7,6 +7,7 @@ import { addEventListener } from "@/lib/addEventListener"
 import { Box } from "@/lib/box"
 import { Point } from "@/lib/point"
 import { useWindowEventListenerEffect, windowEventListenerEffect } from "@/lib/useWindowEventListener"
+import { MaterialSymbolsAdd } from "@/ui/icon"
 import { clamp } from "@/util/clamp"
 import { useEffect, useRef, useState } from "react"
 
@@ -29,6 +30,7 @@ function useAppState() {
       open: false,
       x: 0,
       y: 0,
+      content: null as React.ReactNode | null, // content of the context menu
     },
     objects: [] as {
       id: string,
@@ -72,7 +74,6 @@ function useAppState() {
       if (e.button === 0)
         setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: false, position: new Point(e.clientX, e.clientY) } }))
     }
-
     canvasContainer.addEventListener('mousemove', onMouseMove)
     canvasContainer.addEventListener('mousedown', onMouseDown)
     canvasContainer.addEventListener('mouseup', onMouseUp)
@@ -134,7 +135,7 @@ export function App() {
           color: '#fff'
         }
       ],
-      contextMenu: { open: false, x: 0, y: 0 }
+      contextMenu: { open: false, x: 0, y: 0, content: null }
     })
   }
 
@@ -179,8 +180,25 @@ export function App() {
   }, [state().selection.selecting])
 
   return (
-    <div ref={appState.canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-clip relative bg-black rounded-md"
+    <div ref={appState.canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-hidden relative bg-black rounded-md"
       style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
+      onContextMenu={e => {
+        e.preventDefault()
+        if (e.target !== e.currentTarget) return // Only handle context menu on the canvas container
+        // Open context menu at mouse position
+        setState({
+          ...state(),
+          contextMenu: {
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            content: <button
+              className="hover:bg-white/5 p-2 px-3 cursor-pointer flex items-center gap-2 text-sm text-white"
+              onClick={onCreateNewObject}
+            ><MaterialSymbolsAdd /> Create new Object</button>, // You can set this to a React component if needed
+          }
+        })
+      }}
     >
       {/* Debug Layer */}
       <div className="absolute top-0 left-0 p-2 z-[9999] font-mono whitespace-pre text-xs leading-none bg-black/10">
@@ -192,24 +210,22 @@ export function App() {
       </div>
 
       {/* UI Layer */}
-      <div className="absolute inset-0 z-10">
+      <div className="absolute inset-0 z-10 pointer-events-none">
 
         {/* Context Menu Overlay */}
-        <div className="bg-red-500/50 absolute inset-0"
+        <div className="absolute inset-0"
           style={{
             display: state().contextMenu.open ? 'block' : 'none',
           }}
         >
           {/* Context Menu */}
-          <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
+          <div className="pointer-events-auto bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
             style={{
               left: state().contextMenu.x + 'px',
               top: state().contextMenu.y + 'px',
             }}
           >
-            <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
-              onClick={onCreateNewObject}
-            >+ Create new Object</button>
+            {state().contextMenu.content}
           </div>
         </div>
 
@@ -228,7 +244,7 @@ export function App() {
       </div>
 
       {/* Canvas View Layer */}
-      <div ref={appState.canvasRef} className="canvas crisp-edges rounded-md outline outline-white/10 relative"
+      <div ref={appState.canvasRef} className="canvas crisp-edges rounded-md outline outline-white/10 relative pointer-events-none"
         style={{
           width: `${ CANVAS_WIDTH }px`,
           height: `${ CANVAS_HEIGHT }px`,
@@ -241,7 +257,7 @@ export function App() {
         {/* Objects */}
         {
           state().objects.map((obj) => (
-            <div key={obj.id} className="object absolute rounded-sm"
+            <div key={obj.id} className="pointer-events-auto object absolute rounded-sm"
               style={{
                 left: `${ obj.pos.x }px`,
                 top: `${ obj.pos.y }px`,
