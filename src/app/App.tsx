@@ -100,7 +100,14 @@ function useAppState() {
 export const clampPosX = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_WIDTH * zoom - window.innerWidth) + (CANVAS_PADDING * zoom))
 export const clampPosY = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
 export const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 256
+// canvas = (point - pan) / zoom
+// screen = (point * zoom) + pan
 export const getCanvasPos = (appState: AppState, point: Point) => point.subtract(new Point(appState.state().canvas.x, appState.state().canvas.y)).scale(1 / appState.state().zoom)
+export const getScreenPos = (appState: AppState, point: Point) => point.scale(appState.state().zoom).add(new Point(appState.state().canvas.x, appState.state().canvas.y))
+export const getScreenBox = (appState: AppState, box: Box) => {
+  const pos = getScreenPos(appState, new Point(box.x, box.y))
+  return new Box(pos.x, pos.y, box.width * appState.state().zoom, box.height * appState.state().zoom)
+}
 
 export function App() {
 
@@ -182,6 +189,16 @@ export function App() {
   return (
     <div ref={appState.canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-hidden relative bg-black rounded-md"
       style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
+      onClick={e => {
+        if (e.target !== e.currentTarget) return // Only handle clicks on the canvas container
+        // Clear selection when clicking on the canvas
+        setState({
+          ...state(),
+          selected: [],
+          contextMenu: { open: false, x: 0, y: 0, content: null },
+          selection: { selecting: false, box: null },
+        })
+      }}
       onContextMenu={e => {
         e.preventDefault()
         if (e.target !== e.currentTarget) return // Only handle context menu on the canvas container
@@ -203,10 +220,10 @@ export function App() {
       {/* Debug Layer */}
       <div className="absolute top-0 left-0 p-2 z-[9999] font-mono whitespace-pre text-xs leading-none bg-black/10">
         x: {state().canvas.x.toFixed(5).padStart(10)}, y: {state().canvas.y.toFixed(5).padStart(10)}<br />
-        z: {state().zoom.toFixed(4)}<br />
-        <br />
+        z: {state().zoom.toFixed(4)}<br /><br />
         <span id="mousepos"></span><br />
-        <span id="localmousepos"></span>
+        <span id="localmousepos"></span><br /><br />
+        Selected: {state().selected.length}<br />
       </div>
 
       {/* UI Layer */}
@@ -232,7 +249,7 @@ export function App() {
         {/* Selection */}
         <div
           ref={selectionDragBoxRef}
-          className="absolute top-20 left-20 size-20 bg-blue-500/10 border border-blue-500"
+          className="absolute bg-blue-500/10 border border-blue-500"
           style={{
             display: state().selection.selecting ? 'block' : 'none',
             left: state().selection.box?.x + 'px',
@@ -241,6 +258,30 @@ export function App() {
             height: state().selection.box?.height + 'px',
           }}
         />
+
+        {/* Selection Boundaries */}
+        {state().selected.length > 0 && (
+          state().selected.map(id => {
+            const obj = state().objects.find(o => o.id === id)
+            if (!obj) return null // Skip if object not found
+            // find screen-space position of the object
+            const screenPos = getScreenBox(appState,
+              new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height) // Convert object position and size to a Box
+            )
+            // find screen-space size of the object
+
+            return (
+              <div key={id} className="absolute bg-blue-500/10 border-2 border-blue-500 pointer-events-none bg-transparent"
+                style={{
+                  left: `${ screenPos.x }px`,
+                  top: `${ screenPos.y }px`,
+                  width: `${ screenPos.width }px`,
+                  height: `${ screenPos.height }px`,
+                }}
+              ></div>
+            )
+          })
+        )}
       </div>
 
       {/* Canvas View Layer */}
@@ -264,6 +305,14 @@ export function App() {
                 width: `${ obj.size.width }px`,
                 height: `${ obj.size.height }px`,
                 backgroundColor: obj.color,
+              }}
+              onClick={() => {
+                setState((prev) => {
+                  const selected = prev.selected.includes(obj.id)
+                    ? prev.selected.filter(id => id !== obj.id)
+                    : [...prev.selected, obj.id]
+                  return { ...prev, selected }
+                })
               }}
             >
               {/* <span className="text-white text-xs">{obj.name}</span> */}
