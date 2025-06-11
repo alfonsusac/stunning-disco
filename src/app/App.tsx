@@ -268,8 +268,6 @@ export function App() {
             const screenPos = getScreenBox(appState,
               new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height) // Convert object position and size to a Box
             )
-            // find screen-space size of the object
-
             return (
               <div key={id} className="absolute bg-blue-500/10 border-2 border-blue-500 pointer-events-none bg-transparent"
                 style={{
