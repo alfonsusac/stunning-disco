@@ -3,6 +3,7 @@
 import { useAppContextMenu } from "@/feature/context-menu"
 import { useCanvasPanning } from "@/feature/pan"
 import { useCanvasZoom } from "@/feature/zoom"
+import { addEventListener } from "@/lib/addEventListener"
 import { Box } from "@/lib/box"
 import { Point } from "@/lib/point"
 import { useWindowEventListenerEffect, windowEventListenerEffect } from "@/lib/useWindowEventListener"
@@ -15,6 +16,10 @@ const CANVAS_PADDING = 200
 
 export type AppState = ReturnType<typeof useAppState>
 function useAppState() {
+
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLDivElement>(null)
+
   const [_state, setState] = useState({
     // as X increases, (+x) the camera would go left, and the canvas would translate right.
     // as Y increases, (+y) the camera would go up, and the canvas would translate down.
@@ -44,21 +49,39 @@ function useAppState() {
     }
   })
 
-  useWindowEventListenerEffect('mousemove', e => {
-    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, position: new Point(e.clientX, e.clientY) } }))
-  })
-  useWindowEventListenerEffect('mousedown', (e) => {
-    if (e.button === 1)
-      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
-    if (e.button === 0)
-      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: true, position: new Point(e.clientX, e.clientY) } }))
-  })
-  useWindowEventListenerEffect('mouseup', (e) => {
-    if (e.button === 1)
-      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
-    if (e.button === 0)
-      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: false, position: new Point(e.clientX, e.clientY) } }))
-  })
+  const getCanvasContainer = () => {
+    const canvasContainer = canvasContainerRef.current
+    if (!canvasContainer) throw new Error('Canvas container not found')
+    return canvasContainer
+  }
+
+  useEffect(() => {
+    const canvasContainer = getCanvasContainer()
+    const onMouseMove = (e: MouseEvent) => {
+      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, position: new Point(e.clientX, e.clientY) } }))
+    }
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 1)
+        setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
+      if (e.button === 0)
+        setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: true, position: new Point(e.clientX, e.clientY) } }))
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 1)
+        setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
+      if (e.button === 0)
+        setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: false, position: new Point(e.clientX, e.clientY) } }))
+    }
+
+    canvasContainer.addEventListener('mousemove', onMouseMove)
+    canvasContainer.addEventListener('mousedown', onMouseDown)
+    canvasContainer.addEventListener('mouseup', onMouseUp)
+    return () => {
+      canvasContainer.removeEventListener('mousemove', onMouseMove)
+      canvasContainer.removeEventListener('mousedown', onMouseDown)
+      canvasContainer.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
 
   const stateRef = useRef(_state)
   stateRef.current = _state
@@ -68,7 +91,10 @@ function useAppState() {
    * - made it into closure-safe getter
    */
   const state = () => stateRef.current
-  return { state, setState, stateRef }
+  return {
+    state, setState, stateRef,
+    canvasContainerRef, canvasRef,
+   }
 }
 export const clampPosX = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_WIDTH * zoom - window.innerWidth) + (CANVAS_PADDING * zoom))
 export const clampPosY = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
@@ -76,8 +102,7 @@ export const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 
 export const getCanvasPos = (appState: AppState, point: Point) => point.subtract(new Point(appState.state().canvas.x, appState.state().canvas.y)).scale(1 / appState.state().zoom)
 
 export function App() {
-  const canvasContainerRef = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLDivElement>(null)
+
   const contextMenuRef = useRef<HTMLDivElement>(null)
   const appState = useAppState()
   const { state, setState, stateRef } = appState
@@ -158,7 +183,7 @@ export function App() {
       <div className="h-12 bg-neutral-800 shrink-0">
         Hello World
       </div>
-      <div ref={canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-clip relative bg-black rounded-md"
+      <div ref={appState.canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-clip relative bg-black rounded-md"
         style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
       >
         {/* Debug Layer */}
@@ -207,7 +232,7 @@ export function App() {
         </div>
 
         {/* Canvas View Layer */}
-        <div ref={canvasRef} className="canvas crisp-edges rounded-md outline outline-white/10 relative"
+        <div ref={appState.canvasRef} className="canvas crisp-edges rounded-md outline outline-white/10 relative"
           style={{
             width: `${ CANVAS_WIDTH }px`,
             height: `${ CANVAS_HEIGHT }px`,
