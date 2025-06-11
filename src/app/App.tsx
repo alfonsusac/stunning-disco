@@ -141,20 +141,19 @@ export function App() {
   useEffect(() => {
     if (!state().selection.selecting) return
     return windowEventListenerEffect('mouseup', e => {
-      const mouseEnd = new Point(e.clientX, e.clientY)
       const box = state().selection.box
       if (!box) return
 
       // Calculate selected objects based on the selection box
-      const selectedObjects = state().objects.filter(obj => {
-        const objBox = new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height)
-        return (
-          box.x < objBox.x + objBox.width &&
-          box.x + box.width > objBox.x &&
-          box.y < objBox.y + objBox.height &&
-          box.y + box.height > objBox.y
-        )
-      }).map(obj => obj.id)
+      // const selectedObjects = state().objects.filter(obj => {
+      //   const objBox = new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height)
+      //   return (
+      //     box.x < objBox.x + objBox.width &&
+      //     box.x + box.width > objBox.x &&
+      //     box.y < objBox.y + objBox.height &&
+      //     box.y + box.height > objBox.y
+      //   )
+      // }).map(obj => obj.id)
 
       setState({
         ...state(),
@@ -162,7 +161,7 @@ export function App() {
           selecting: false,
           box: null
         },
-        selected: selectedObjects
+        // selected: selectedObjects
       })
     })
   }, [state().selection.selecting])
