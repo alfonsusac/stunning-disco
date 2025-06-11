@@ -127,13 +127,7 @@ export function App() {
       const height = Math.abs(mouseStart.y - mouseEnd.y)
 
       const box = new Box(startX, startY, width, height)
-      setState((prev) => ({
-        ...prev,
-        selection: {
-          selecting: true,
-          box: box
-        }
-      }))
+      setState((prev) => ({ ...prev, selection: { selecting: true, box: box } }))
     })
 
   }, [state().mouse.leftClick])
@@ -155,87 +149,91 @@ export function App() {
       //   )
       // }).map(obj => obj.id)
 
-      setState({
-        ...state(),
-        selection: {
-          selecting: false,
-          box: null
-        },
-        // selected: selectedObjects
-      })
+      setState({ ...state(), selection: { selecting: false, box: null }, })
     })
   }, [state().selection.selecting])
 
   return (
-    <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative"
-      style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
-    >
-      {/* Debug Layer */}
-      <div className="fixed top-2 left-2 z-[9999] font-mono whitespace-pre">
-        x: {state().canvas.x.toFixed(5).padStart(10)}, y: {state().canvas.y.toFixed(5).padStart(10)}<br />
-        {state().zoom.toFixed(4)}<br />
-        <br />
-        <span id="mousepos"></span><br />
-        <span id="localmousepos"></span>
+    <div className="bg-neutral-800 p-2 w-screen h-screen flex flex-col items-stretch">
+      <div className="h-12 bg-neutral-800 shrink-0">
+        Hello World
       </div>
-
-      {/* UI Layer */}
-      <div className="absolute inset-0 z-10">
-        {/* Context Menu */}
-        <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
-          style={{
-            left: state().contextMenu.x + 'px',
-            top: state().contextMenu.y + 'px',
-            display: state().contextMenu.open ? 'block' : 'none',
-          }}
-        >
-          <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
-            onClick={onCreateNewObject}
-          >+ Create new Object</button>
-        </div>
-
-        {/* Selection */}
-        <div
-          ref={selectionDragBoxRef}
-          className="absolute top-20 left-20 size-20 bg-blue-500/10 border border-blue-500"
-          style={{
-            display: state().selection.selecting ? 'block' : 'none',
-            left: state().selection.box?.x + 'px',
-            top: state().selection.box?.y + 'px',
-            width: state().selection.box?.width + 'px',
-            height: state().selection.box?.height + 'px',
-          }}
-        >
-          
-        </div>
-      </div>
-
-      {/* Canvas View Layer */}
-      <div ref={canvasRef} className="canvas bg-neutral-400 bg-[url('/image.png')] crisp-edges rounded-md outline outline-white/10 relative"
-        style={{
-          width: `${ CANVAS_WIDTH }px`,
-          height: `${ CANVAS_HEIGHT }px`,
-          // Pos needs to be negative because it needs to go the opposite of the camera.
-          transform: `translate(${ state().canvas.x }px, ${ state().canvas.y }px) scale(${ state().zoom }) `,
-          transformOrigin: '0 0',
-        }}
+      <div ref={canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-clip relative bg-black rounded-md"
+        style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
       >
-        {/* Objects */}
-        {
-          state().objects.map((obj) => (
-            <div key={obj.id} className="object absolute rounded-sm"
+        {/* Debug Layer */}
+        <div className="absolute top-0 left-0 p-2 z-[9999] font-mono whitespace-pre text-xs leading-none bg-black/10">
+          x: {state().canvas.x.toFixed(5).padStart(10)}, y: {state().canvas.y.toFixed(5).padStart(10)}<br />
+          z: {state().zoom.toFixed(4)}<br />
+          <br />
+          <span id="mousepos"></span><br />
+          <span id="localmousepos"></span>
+        </div>
+
+        {/* UI Layer */}
+        <div className="absolute inset-0 z-10">
+
+          {/* Context Menu Overlay */}
+          <div className="bg-red-500/50 absolute inset-0"
+            style={{
+              display: state().contextMenu.open ? 'block' : 'none',
+            }}
+          >
+            {/* Context Menu */}
+            <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
               style={{
-                left: `${ obj.pos.x }px`,
-                top: `${ obj.pos.y }px`,
-                width: `${ obj.size.width }px`,
-                height: `${ obj.size.height }px`,
-                backgroundColor: obj.color,
+                left: state().contextMenu.x + 'px',
+                top: state().contextMenu.y + 'px',
               }}
             >
-              {/* <span className="text-white text-xs">{obj.name}</span> */}
+              <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
+                onClick={onCreateNewObject}
+              >+ Create new Object</button>
             </div>
-          ))
-        }
+          </div>
+
+          {/* Selection */}
+          <div
+            ref={selectionDragBoxRef}
+            className="absolute top-20 left-20 size-20 bg-blue-500/10 border border-blue-500"
+            style={{
+              display: state().selection.selecting ? 'block' : 'none',
+              left: state().selection.box?.x + 'px',
+              top: state().selection.box?.y + 'px',
+              width: state().selection.box?.width + 'px',
+              height: state().selection.box?.height + 'px',
+            }}
+          />
+        </div>
+
+        {/* Canvas View Layer */}
+        <div ref={canvasRef} className="canvas crisp-edges rounded-md outline outline-white/10 relative"
+          style={{
+            width: `${ CANVAS_WIDTH }px`,
+            height: `${ CANVAS_HEIGHT }px`,
+            // Pos needs to be negative because it needs to go the opposite of the camera.
+            transform: `translate(${ state().canvas.x }px, ${ state().canvas.y }px) scale(${ state().zoom }) `,
+            transformOrigin: '0 0',
+          }}
+          
+        >
+          {/* Objects */}
+          {
+            state().objects.map((obj) => (
+              <div key={obj.id} className="object absolute rounded-sm"
+                style={{
+                  left: `${ obj.pos.x }px`,
+                  top: `${ obj.pos.y }px`,
+                  width: `${ obj.size.width }px`,
+                  height: `${ obj.size.height }px`,
+                  backgroundColor: obj.color,
+                }}
+              >
+                {/* <span className="text-white text-xs">{obj.name}</span> */}
+              </div>
+            ))
+          }
+        </div>
       </div>
     </div>
   )
