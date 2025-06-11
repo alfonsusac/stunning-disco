@@ -28,6 +28,7 @@ export function useCanvasPanning(
   useEffect(() => {
     const middleClick = state().mouse.middleClick
     if (!middleClick) return
+    if (state().contextMenu.open) return
     return windowEventListenerEffect('mousemove', (e) => {
       handlePanning(e.movementX, e.movementY)
     })

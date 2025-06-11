@@ -3,8 +3,9 @@
 import { useAppContextMenu } from "@/feature/context-menu"
 import { useCanvasPanning } from "@/feature/pan"
 import { useCanvasZoom } from "@/feature/zoom"
+import { Box } from "@/lib/box"
 import { Point } from "@/lib/point"
-import { useWindowEventListenerEffect } from "@/lib/useWindowEventListener"
+import { useWindowEventListenerEffect, windowEventListenerEffect } from "@/lib/useWindowEventListener"
 import { clamp } from "@/util/clamp"
 import { useEffect, useRef, useState } from "react"
 
@@ -33,12 +34,13 @@ function useAppState() {
     }[],
     selected: [] as string[], // array of object IDs that are selected
     mouse: {
+      leftClick: false,
       middleClick: false,
       position: new Point(0, 0)
     },
-    controls: {
+    selection: {
       selecting: false,
-      
+      box: null as Box | null, // box for selection drag
     }
   })
 
@@ -46,13 +48,16 @@ function useAppState() {
     setState((prev) => ({ ...prev, mouse: { ...prev.mouse, position: new Point(e.clientX, e.clientY) } }))
   })
   useWindowEventListenerEffect('mousedown', (e) => {
-    if (e.button !== 1) return // Only handle middle click
-    if (state().contextMenu.open) return
-    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
+    if (e.button === 1)
+      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: true, position: new Point(e.clientX, e.clientY) } }))
+    if (e.button === 0)
+      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: true, position: new Point(e.clientX, e.clientY) } }))
   })
   useWindowEventListenerEffect('mouseup', (e) => {
-    if (e.button !== 1) return // Only handle middle click
-    setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
+    if (e.button === 1)
+      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, middleClick: false, position: new Point(e.clientX, e.clientY) } }))
+    if (e.button === 0)
+      setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: false, position: new Point(e.clientX, e.clientY) } }))
   })
 
   const stateRef = useRef(_state)
@@ -108,6 +113,60 @@ export function App() {
     })
   }
 
+  const selectionDragBoxRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!state().mouse.leftClick) return
+    if (state().contextMenu.open) return
+    if (state().selection.selecting) return
+    const mouseStart = state().mouse.position
+    return windowEventListenerEffect('mousemove', (e) => {
+      const mouseEnd = new Point(e.clientX, e.clientY)
+      const startX = Math.min(mouseStart.x, mouseEnd.x)
+      const startY = Math.min(mouseStart.y, mouseEnd.y)
+      const width = Math.abs(mouseStart.x - mouseEnd.x)
+      const height = Math.abs(mouseStart.y - mouseEnd.y)
+
+      const box = new Box(startX, startY, width, height)
+      setState((prev) => ({
+        ...prev,
+        selection: {
+          selecting: true,
+          box: box
+        }
+      }))
+    })
+
+  }, [state().mouse.leftClick])
+
+  useEffect(() => {
+    if (!state().selection.selecting) return
+    return windowEventListenerEffect('mouseup', e => {
+      const mouseEnd = new Point(e.clientX, e.clientY)
+      const box = state().selection.box
+      if (!box) return
+
+      // Calculate selected objects based on the selection box
+      const selectedObjects = state().objects.filter(obj => {
+        const objBox = new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height)
+        return (
+          box.x < objBox.x + objBox.width &&
+          box.x + box.width > objBox.x &&
+          box.y < objBox.y + objBox.height &&
+          box.y + box.height > objBox.y
+        )
+      }).map(obj => obj.id)
+
+      setState({
+        ...state(),
+        selection: {
+          selecting: false,
+          box: null
+        },
+        selected: selectedObjects
+      })
+    })
+  }, [state().selection.selecting])
+
   return (
     <div ref={canvasContainerRef} className="canvas-container w-screen h-screen overflow-clip relative"
       style={{ cursor: state().mouse.middleClick ? "grab" : "unset" }}
@@ -120,20 +179,39 @@ export function App() {
         <span id="mousepos"></span><br />
         <span id="localmousepos"></span>
       </div>
-      {/* Context Menu */}
-      <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
-        style={{
-          left: state().contextMenu.x + 'px',
-          top: state().contextMenu.y + 'px',
-          display: state().contextMenu.open ? 'block' : 'none',
-        }}
-      >
-        <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
-          onClick={onCreateNewObject}
-        >+ Create new Object</button>
+
+      {/* UI Layer */}
+      <div className="absolute inset-0 z-10">
+        {/* Context Menu */}
+        <div className="bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
+          style={{
+            left: state().contextMenu.x + 'px',
+            top: state().contextMenu.y + 'px',
+            display: state().contextMenu.open ? 'block' : 'none',
+          }}
+        >
+          <button className="hover:bg-white/5 p-2 px-3 cursor-pointer"
+            onClick={onCreateNewObject}
+          >+ Create new Object</button>
+        </div>
+
+        {/* Selection */}
+        <div
+          ref={selectionDragBoxRef}
+          className="absolute top-20 left-20 size-20 bg-blue-500/10 border border-blue-500"
+          style={{
+            display: state().selection.selecting ? 'block' : 'none',
+            left: state().selection.box?.x + 'px',
+            top: state().selection.box?.y + 'px',
+            width: state().selection.box?.width + 'px',
+            height: state().selection.box?.height + 'px',
+          }}
+        >
+          
+        </div>
       </div>
 
-      {/* Canvas View */}
+      {/* Canvas View Layer */}
       <div ref={canvasRef} className="canvas bg-neutral-400 bg-[url('/image.png')] crisp-edges rounded-md outline outline-white/10 relative"
         style={{
           width: `${ CANVAS_WIDTH }px`,
