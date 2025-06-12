@@ -2,11 +2,10 @@
 
 import { useAppContextMenu } from "@/feature/context-menu"
 import { useCanvasPanning } from "@/feature/pan"
+import { useCanvasSelection } from "@/feature/selection"
 import { useCanvasZoom } from "@/feature/zoom"
-import { addEventListener } from "@/lib/addEventListener"
 import { Box } from "@/lib/box"
 import { Point } from "@/lib/point"
-import { useWindowEventListenerEffect, windowEventListenerEffect } from "@/lib/useWindowEventListener"
 import { MaterialSymbolsAdd } from "@/ui/icon"
 import { clamp } from "@/util/clamp"
 import { useEffect, useRef, useState } from "react"
@@ -74,13 +73,13 @@ function useAppState() {
       if (e.button === 0)
         setState((prev) => ({ ...prev, mouse: { ...prev.mouse, leftClick: false, position: new Point(e.clientX, e.clientY) } }))
     }
-    canvasContainer.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mousemove', onMouseMove)
     canvasContainer.addEventListener('mousedown', onMouseDown)
-    canvasContainer.addEventListener('mouseup', onMouseUp)
+    window.addEventListener('mouseup', onMouseUp)
     return () => {
-      canvasContainer.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mousemove', onMouseMove)
       canvasContainer.removeEventListener('mousedown', onMouseDown)
-      canvasContainer.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('mouseup', onMouseUp)
     }
   }, [])
 
@@ -100,7 +99,7 @@ function useAppState() {
 export const clampPosX = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_WIDTH * zoom - window.innerWidth) + (CANVAS_PADDING * zoom))
 export const clampPosY = (num: number, zoom: number) => -clamp((-CANVAS_PADDING * zoom), -num, (CANVAS_HEIGHT * zoom - window.innerHeight) + (CANVAS_PADDING * zoom))
 export const clampZoom = (num: number) => clamp(0.02, num, 256) // real: 0.02 - 256
-// canvas = (point - pan) / zoom
+// canvas = (point - pan) / zoom 
 // screen = (point * zoom) + pan
 export const getCanvasPos = (appState: AppState, point: Point) => point.subtract(new Point(appState.state().canvas.x, appState.state().canvas.y)).scale(1 / appState.state().zoom)
 export const getScreenPos = (appState: AppState, point: Point) => point.scale(appState.state().zoom).add(new Point(appState.state().canvas.x, appState.state().canvas.y))
@@ -146,45 +145,7 @@ export function App() {
     })
   }
 
-  const selectionDragBoxRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!state().mouse.leftClick) return
-    if (state().contextMenu.open) return
-    if (state().selection.selecting) return
-    const mouseStart = state().mouse.position
-    return windowEventListenerEffect('mousemove', (e) => {
-      const mouseEnd = new Point(e.clientX, e.clientY)
-      const startX = Math.min(mouseStart.x, mouseEnd.x)
-      const startY = Math.min(mouseStart.y, mouseEnd.y)
-      const width = Math.abs(mouseStart.x - mouseEnd.x)
-      const height = Math.abs(mouseStart.y - mouseEnd.y)
-
-      const box = new Box(startX, startY, width, height)
-      setState((prev) => ({ ...prev, selection: { selecting: true, box: box } }))
-    })
-
-  }, [state().mouse.leftClick])
-
-  useEffect(() => {
-    if (!state().selection.selecting) return
-    return windowEventListenerEffect('mouseup', e => {
-      const box = state().selection.box
-      if (!box) return
-
-      // Calculate selected objects based on the selection box
-      // const selectedObjects = state().objects.filter(obj => {
-      //   const objBox = new Box(obj.pos.x, obj.pos.y, obj.size.width, obj.size.height)
-      //   return (
-      //     box.x < objBox.x + objBox.width &&
-      //     box.x + box.width > objBox.x &&
-      //     box.y < objBox.y + objBox.height &&
-      //     box.y + box.height > objBox.y
-      //   )
-      // }).map(obj => obj.id)
-
-      setState({ ...state(), selection: { selecting: false, box: null }, })
-    })
-  }, [state().selection.selecting])
+  useCanvasSelection(appState)
 
   return (
     <div ref={appState.canvasContainerRef} className="canvas-container flex-1 min-h-0 overflow-hidden relative bg-black rounded-md"
@@ -222,7 +183,9 @@ export function App() {
         x: {state().canvas.x.toFixed(5).padStart(10)}, y: {state().canvas.y.toFixed(5).padStart(10)}<br />
         z: {state().zoom.toFixed(4)}<br /><br />
         <span id="mousepos"></span><br />
-        <span id="localmousepos"></span><br /><br />
+        <span id="localmousepos"></span><br />
+        LClick: {state().mouse.leftClick ? 'Yes' : 'No'}<br />
+        <br />
         Selected: {state().selected.length}<br />
       </div>
 
@@ -230,11 +193,7 @@ export function App() {
       <div className="absolute inset-0 z-10 pointer-events-none">
 
         {/* Context Menu Overlay */}
-        <div className="absolute inset-0"
-          style={{
-            display: state().contextMenu.open ? 'block' : 'none',
-          }}
-        >
+        <div className="absolute inset-0" style={{ display: state().contextMenu.open ? 'block' : 'none' }}>
           {/* Context Menu */}
           <div className="pointer-events-auto bg-neutral-800 absolute z-10 rounded-sm overflow-hidden" ref={contextMenuRef}
             style={{
@@ -248,7 +207,7 @@ export function App() {
 
         {/* Selection */}
         <div
-          ref={selectionDragBoxRef}
+          // ref={selectionDragBoxRef}
           className="absolute bg-blue-500/10 border border-blue-500"
           style={{
             display: state().selection.selecting ? 'block' : 'none',

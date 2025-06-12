@@ -4,10 +4,28 @@ import { useWindowEventListenerEffect } from "@/lib/useWindowEventListener"
 import { offsetCanvasPosAfterZoomAroundPoint } from "./zoomAroundPoint"
 import { clamp } from "@/util/clamp"
 
+// Primitive
+
+export function getNewZoom(
+  currZoom: number,
+  deltaY: number,
+  zoomIntensity: number = 0.015,
+) {
+  const deltaZoom = clamp(-10, deltaY, 10) * zoomIntensity * (currZoom / 2)
+  const newZoom = clampZoom(currZoom - deltaZoom)
+  return newZoom
+}
+
+
+
+
+
+// App
+
 export function useCanvasZoom(
   { setState, state, stateRef }: AppState
 ) {
-  
+
   useWindowEventListenerEffect('wheel', (e: WheelEvent) => {
     e.preventDefault()
     const currCanvas = state().canvas
@@ -17,10 +35,10 @@ export function useCanvasZoom(
       // Zoom in/out
       // - pinch out / zoom in = -deltaY
       // - pinch in / zoom out = +deltaY
-      const zoomIntensity = 0.015 // how fast zoom changes
-      const deltaZoom = clamp(-10, e.deltaY, 10) * zoomIntensity * (currZoom / 2)
+      // const zoomIntensity = 0.015 // how fast zoom changes
+      // const deltaZoom = clamp(-10, e.deltaY, 10) * zoomIntensity * (currZoom / 2)
       // console.log(deltaZoom)
-      const newZoom = clampZoom(currZoom - deltaZoom)
+      const newZoom = getNewZoom(currZoom, e.deltaY)
       // Its using minus because:
       // - zoom in  -> (-deltaY) -> zoom needs to be higher.
       // - zoom out -> (+deltaY) -> zoom needs to be lower.

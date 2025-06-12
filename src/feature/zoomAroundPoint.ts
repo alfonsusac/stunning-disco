@@ -1,15 +1,12 @@
+import { Point } from "@/lib/point"
+import { getNewZoom } from "./zoom"
+
 export function offsetCanvasPosAfterZoomAroundPoint(
   currZoom: number,
   newZoom: number,
-  point: {
-    x: number,
-    y: number,
-  },
+  point: Point,
   // Canvas position relative to the viewport
-  canvas: {
-    x: number,
-    y: number,  
-  }
+  canvas: Point
 ) {
 
   // Calculate new position based on zoom around the cursor
@@ -77,8 +74,21 @@ export function offsetCanvasPosAfterZoomAroundPoint(
   // - if canvas move to left, that means camera moves to right.
   // - Thats why second arrow vector is going to the right
 
+  return new Point(newPosX, newPosY)
+}
+
+
+export function getNewTransformAroundPoint(
+  currZoom: number,
+  deltaY: number,
+  point: Point,
+  // Canvas position relative to the viewport
+  canvas: Point
+) {
+  const newZoom = getNewZoom(currZoom, deltaY)
+  const newPos = offsetCanvasPosAfterZoomAroundPoint(currZoom, newZoom, point, canvas)
   return {
-    x: newPosX,
-    y: newPosY,
+    pos: newPos,
+    zoom: newZoom,
   }
 }

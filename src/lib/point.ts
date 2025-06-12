@@ -24,6 +24,11 @@ export class Point {
     return new Point(-this.x, -this.y);
   }
 
+  // Clone this point
+  clone(): Point {
+    return new Point(this.x, this.y);
+  }
+
   // Get the distance between this point and another point
   distanceTo(point: Point): number {
     const dx = this.x - point.x;
