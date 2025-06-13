@@ -10,4 +10,10 @@ export class Box {
     this.width = width;
     this.height = height;
   }
+  get w() {
+    return this.width;
+  }
+  get h() {
+    return this.height;
+  }
 }

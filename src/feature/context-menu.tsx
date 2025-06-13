@@ -27,5 +27,10 @@ export function useAppContextMenu(
       }
     })
   }, [state().contextMenu.open])
-  
+}
+
+
+export type ContextMenuItem = {
+  label: string
+  action: () => void
 }

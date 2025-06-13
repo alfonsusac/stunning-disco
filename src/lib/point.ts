@@ -1,3 +1,8 @@
+export interface PointConstructor {
+  x: number;
+  y: number;
+}
+
 export class Point {
   constructor(
     public x: number,
@@ -42,4 +47,13 @@ export class Point {
     const dy = this.y - point.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
+
+  //
+  //
+  //
+  
+  toString(): string {
+    return `Point(${this.x}, ${this.y})`;
+  }
+
 }
