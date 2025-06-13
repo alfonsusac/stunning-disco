@@ -1,6 +1,6 @@
-import { useRef } from "react"
+import { useEffect, useRef } from "react"
 
-export function useRefState<T>(
+export function useReactiveRef<T>(
   defaultValue: T,
   onChange: (value: T) => void,
 ) {

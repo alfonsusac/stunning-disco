@@ -34,3 +34,26 @@ export function useCanvasPanning(
     })
   }, [state().mouse.middleClick])
 }
+
+
+
+export function initiatePanning(
+  initialMouse: { clientX: number, clientY: number },
+  initialCamera: Point
+) {
+  return (newMouse: { clientX: number, clientY: number }) => {
+    return new Point(
+      initialCamera.x - (initialMouse.clientX - newMouse.clientX),
+      initialCamera.y - (initialMouse.clientY - newMouse.clientY)
+    )
+  }
+}
+
+export function getTrackpadPanNewPosition(
+  camera: Point,
+  wheelDelta: { deltaX: number, deltaY: number },
+) {
+  return camera.madd(
+    new Point(-wheelDelta.deltaX, -wheelDelta.deltaY)
+  )
+}

@@ -8,6 +8,13 @@ export class Point {
   add(point: Point): Point {
     return new Point(this.x + point.x, this.y + point.y);
   }
+  
+  // Add another point to this point (mutable)
+  madd(point: Point): Point {
+    this.x += point.x;
+    this.y += point.y;
+    return this;
+  }
 
   // Subtract another point from this point
   subtract(point: Point): Point {

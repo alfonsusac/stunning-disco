@@ -11,11 +11,11 @@ import { Cleaner } from "./cleaner"
  * 
  * @example
  * ```javascript
- * useBeffect((cleaner) => {
+ * useBearEffect((effect) => {
  *   const interval = setInterval(() => {
  *     console.log('Running effect')
  *   }, 1000)
- *   cleaner.add = () => clearInterval(interval) // Register cleanup
+ *   effect.add = () => clearInterval(interval) // Register cleanup
  * }, [dependencies])
  * ```
  */
