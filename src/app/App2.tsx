@@ -6,18 +6,15 @@ import { initiatePanning } from "@/feature/pan"
 import { attachListener, attachWindowListener } from "@/lib/attachListener"
 import { Box } from "@/lib/box"
 import { Camera } from "@/lib/camera"
-import { createDomHandle } from "@/lib/create-dom"
 import { isMiddleClick } from "@/lib/isMouse"
 import type { MouseEventPosition } from "@/lib/mouse-event"
 import { Point } from "@/lib/point"
-import { ReactiveCamera } from "@/lib/reactive-camera"
 import { useBearEffect } from "@/lib/useBearEffect"
 import { createDeclarativeRef } from "@/lib/useDeclarativeRef"
 import { useDivRef } from "@/lib/useDivRef"
-import { createRefComponent } from "@/lib/useRefComponent"
 import { useReactiveRef } from "@/lib/useSkate"
 import { ContextMenu } from "@/ui/context-menu-item"
-import { createRef, useState, type ReactNode, type Ref, type RefCallback, type RefObject } from "react"
+import { createRef, useState, type ReactNode } from "react"
 
 export function App2() {
 
@@ -116,6 +113,7 @@ export function App2() {
   const [updateObjects, objects] = useReactiveRef({
     list: [] as CanvasObject[],
     get: (id: string) => objects.list.find(obj => obj.id === id),
+    getMany: (ids: string[]) => objects.list.filter(obj => ids.includes(obj.id)),
     add: (x: number, y: number, w: number, h: number) => {
       const id = crypto.randomUUID()
       const ref = createRef<HTMLDivElement>()
@@ -135,7 +133,7 @@ export function App2() {
           onContextMenu={e => contextMenu.show(e, [
             { label: 'Delete', action: () => objects.remove(id) }
           ])}
-          onClick={() => selection.select(id)}
+          onClick={() => selection.selectOrDeselect(id)}
         >
         </div>
       objects.list.push({ id, box, ref, jsx })
@@ -146,6 +144,7 @@ export function App2() {
       if (index === -1) return
       objects.list.splice(index, 1)
       updateObjects()
+      selection.deselect(id) // Deselect the object if it was selected
     }
   }, state => setRenderedObjects(state.list.map(obj => obj.jsx)))
 
@@ -174,14 +173,33 @@ export function App2() {
       selection.list = [...selection.list, { id, ref }]
       updateSelection()
     },
+    deselect: (id: string) => {
+      const index = selection.list.findIndex(item => item.id === id)
+      if (index === -1) return
+      selection.list = selection.list.toSpliced(index, 1)
+      updateSelection()
+    },
+    selectOrDeselect: (id: string) => {
+      const index = selection.list.findIndex(item => item.id === id)
+      if (index === -1) {
+        selection.select(id)
+      } else {
+        selection.deselect(id)
+      }
+    },
+    clear: () => {
+      selection.list = []
+      updateSelection()
+    },
+    getSelected: () => selection.list.map(item => item.id),
     updateBoxAllSelected: (camera: Camera) => {
       selection.list.forEach(selection => {
         selection.ref.update()
       })
     }
-  }, state => {
+  }, state => 
     setRenderedSelection(state.list)
-  })
+  )
 
 
   const [count, setCount] = useState(0)
