@@ -120,3 +120,27 @@ function Count(props: { doubled: boolean }) {
     {count > 5 && <Comp3 />}
   </div>
 }
+
+/**
+
+Explanation:
+
+Exploration on how to create "unified" component that is rich in feature, if 
+creating "factory" function that creates component with additional feature like : 
+- imperative handling
+- context
+is even possible.
+
+Result:
+ > The createCount() function works. But it breaks HMR.
+
+Notes:
+- useMemo and useRef behaves similarly in this case. It is up to further exploration to see which one fits better.
+- Do not store JSX in useMemo since it will just "capture" snapshot of resulting component.
+- Do not "evaluate" the component in the render() function (before return). 
+   Any changes to parent state will cause the children component to re-evaluate.
+- Thats why the createCount() function is called outside of the component render function.
+   Or called inside the useRef to maintain stable reference to the component.
+- Improves imperaetive control but breaks HMR.
+
+ */

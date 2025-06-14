@@ -1,5 +1,6 @@
 import { useEffect, type DependencyList } from "react"
 import { Cleaner } from "./cleaner"
+import { attachListener } from "./attachListener"
 
 /**
  * A React hook that runs an effect with a Cleaner instance.
@@ -20,13 +21,20 @@ import { Cleaner } from "./cleaner"
  * ```
  */
 export function useBearEffect(
-  effect: (cleaneer: Cleaner) => void,
+  effect: (effectInterface: Effect) => void,
   deps?: DependencyList
 ) {
   useEffect(() => {
     const cleaner = new Cleaner()
-    effect(cleaner)
+    const effectInterface = new Effect(cleaner)
+    effect(effectInterface)
     return () => cleaner.clean()
   }, deps)
 }
 
+class Effect {
+  constructor(private cleaner: Cleaner) { }
+  set add(cleanup: () => void) {
+    this.cleaner.add = cleanup
+  }
+}

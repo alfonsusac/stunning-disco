@@ -12,10 +12,12 @@ import type { MouseEventPosition } from "@/lib/mouse-event"
 import { Point } from "@/lib/point"
 import { ReactiveCamera } from "@/lib/reactive-camera"
 import { useBearEffect } from "@/lib/useBearEffect"
+import { createDeclarativeRef } from "@/lib/useDeclarativeRef"
 import { useDivRef } from "@/lib/useDivRef"
+import { createRefComponent } from "@/lib/useRefComponent"
 import { useReactiveRef } from "@/lib/useSkate"
 import { ContextMenu } from "@/ui/context-menu-item"
-import { createRef, useState, type ReactNode } from "react"
+import { createRef, useState, type ReactNode, type Ref, type RefCallback, type RefObject } from "react"
 
 export function App2() {
 
@@ -149,47 +151,44 @@ export function App2() {
 
   // Selected ------------------------------------------------------------------------------
 
-  const [renderedSelection, setRenderedSelection] = useState<ReactNode[]>([])
-  const [createSelectionDom] = createDomHandle<HTMLDivElement>()(
-    (ref, id: string) =>
-      <div
-        ref={ref}
-        key={id}
-        className="outline outline-red-400 size-8 absolute z-[999] pointer-events-none"
-      />,
-    (ref) => ({
-      update: (screenSpaceBox: Box) => {
-        ref.current!.style.top = `${ screenSpaceBox.y }px`
-        ref.current!.style.left = `${ screenSpaceBox.x }px`
-        ref.current!.style.width = `${ screenSpaceBox.w }px`
-        ref.current!.style.height = `${ screenSpaceBox.h }px`
-      }
-    })
+
+  const comp = (id: string, c: number) => {
+    return <div
+      key={id}
+      className="outline outline-red-400 size-8 absolute z-[999] pointer-events-none"
+    >{c}</div>
+  }
+
+  const createSelectionRef = createDeclarativeRef<HTMLDivElement>()(
+    (ref, obj: CanvasObject) => {
+      const screenPos = camera.toScreen(obj.box.x, obj.box.y)
+      ref.current!.style.top = `${ screenPos.y }px`
+      ref.current!.style.left = `${ screenPos.x }px`
+      ref.current!.style.width = `${ obj.box.w * camera.zoom }px`
+      ref.current!.style.height = `${ obj.box.h * camera.zoom }px`
+    }
   )
+
+  const [renderedSelection, setRenderedSelection] = useState<typeof selection['list']>([])
   const [updateSelection, selection] = useReactiveRef({
     list: [] as {
       id: string,
-      dom: ReturnType<typeof createSelectionDom>
-      onCameraUpdate?: (camera: ReactiveCamera) => void
+      ref: ReturnType<typeof createSelectionRef>,
     }[],
     select: (id: string) => {
       const obj = objects.get(id)
       if (!obj) return
-
-      const dom = createSelectionDom(id)
-      selection.list = [{ id, dom }]
+      const ref = createSelectionRef(obj)
+      selection.list = [...selection.list, { id, ref }]
       updateSelection()
     },
     updateBoxAllSelected: (camera: Camera) => {
       selection.list.forEach(selection => {
-        const obj = objects.get(selection.id)
-        if (!obj) return
-        const screenPos = camera.toScreen(obj.box.x, obj.box.y)
-        selection.dom.update(new Box(screenPos.x, screenPos.y, obj.box.w * camera.zoom, obj.box.h * camera.zoom))
+        selection.ref.update()
       })
     }
   }, state => {
-    setRenderedSelection(state.list.map(obj => obj.dom.jsx))
+    setRenderedSelection(state.list)
   })
 
 
@@ -202,7 +201,7 @@ export function App2() {
     >
       <div id="context-menu"
         ref={contextMenuElementRef}
-        className="w-46  bg-neutral-800 text-neutral-500 rounded-lg absolute top-0 left-0
+        className="w-46  bg-neutral-800 rounded-lg absolute top-0 left-0
         text-sm p-1.5 px-1.5 border border-white/3 border-t border-t-white/10
         pointer-events-auto"
       >
@@ -210,7 +209,12 @@ export function App2() {
       </div>
     </div>
 
-    {renderedSelection}
+    {renderedSelection.map(selectionItem => <div
+      key={selectionItem.id}
+      ref={selectionItem.ref.callback}
+      className="outline outline-blue-400 size-8 absolute z-[999] pointer-events-none"
+    ></div>)}
+
 
     <div id="canvas-container"
       ref={canvasContainerElementRef}
@@ -226,4 +230,5 @@ export function App2() {
   </>
 
 }
+
 
