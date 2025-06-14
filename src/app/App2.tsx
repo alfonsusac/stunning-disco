@@ -151,14 +151,6 @@ export function App2() {
 
   // Selected ------------------------------------------------------------------------------
 
-
-  const comp = (id: string, c: number) => {
-    return <div
-      key={id}
-      className="outline outline-red-400 size-8 absolute z-[999] pointer-events-none"
-    >{c}</div>
-  }
-
   const createSelectionRef = createDeclarativeRef<HTMLDivElement>()(
     (ref, obj: CanvasObject) => {
       const screenPos = camera.toScreen(obj.box.x, obj.box.y)
